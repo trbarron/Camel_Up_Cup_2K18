@@ -13,7 +13,10 @@ def Player0(player,g):
     return [0]
 
 def Player1(player,g):
-    #This dumb player always places/moves a trap
+    #This player is less dumb. If they have the least amount of money they'll make a round winner bet
+    #If they aren't in last then they'll place a trap on a random square. Still p dumb though
+    if min(g.player_money_values) == g.player_money_values[player]:
+        return [2,random.randint(0,len(g.camels)-1)]
     return [1,math.floor(2*random.random())*2-1,random.randint(1,10)]
 
 def Player2(player,g):
