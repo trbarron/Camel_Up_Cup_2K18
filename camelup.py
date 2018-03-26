@@ -6,21 +6,21 @@ import players
 camels = [0,1,2,3,4]
 num_camels = len(camels)
 num_players = 4
-finish_line = 12
+finish_line = 16
 display_updates = True
 
 class GameState:
     def __init__(self):
-        self.camel_track = [[]]*finish_line+2 #Plus 2 because they could roll a 3 and go a bit past the finish
-        self.trap_track = [[]]*finish_line+2 #entry of the form [trap_type (-1,1), player]
+        self.camel_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+        self.trap_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]] #entry of the form [trap_type (-1,1), player]
         self.player_has_placed_trap = [False,False,False,False]
         self.round_bets = []		#of the form [camel,player]
         self.game_winner_bets = []			#of the form [camel,player]
         self.game_losing_bets = []			#of the form [camel,player]
         self.player_round_bets = []
-        self.player_game_bets = [[False]*num_camels]*num_players #Players can only bet on a camel being a game winner/loser
-        self.player_money_values = [3]*num_players
-        self.camel_yet_to_move = [1]*num_camels
+        self.player_game_bets = [[False,False,False,False,False],[False,False,False,False,False],[False,False,False,False,False],[False,False,False,False,False]] #please generalize this later although [[False]*num_camels]*num_players leaves them linked. Deepcopy?
+        self.player_money_values = [3,3,3,3]
+        self.camel_yet_to_move = [True,True,True,True,True]
         self.active_game = True
         self.camels = camels
         initial_camels = copy.deepcopy(camels)
@@ -40,13 +40,9 @@ def MoveCamel(g,player):
     while not selected_camel:
         camel_index = random.randint(0,num_camels - 1)
         selected_camel = g.camel_yet_to_move[camel_index]
-    g.camel_yet_to_move[camel_index] = 0 #Remove camel from pool
+    g.camel_yet_to_move[camel_index] = False #Remove camel from pool
     [curr_pos,found_y_pos] = [(ix,iy) for ix, row in enumerate(g.camel_track) for iy, i in enumerate(row) if i == camel_index][0] #Find distance, check for traps
     stack = len(g.camel_track[curr_pos])-found_y_pos
-    print(stack)
-    print(g.camel_track)
-    print(curr_pos)
-    print(camel_index)
     distance = random.randint(1,3)
     if (len(g.trap_track[curr_pos + distance]) > 0):
         if display_updates : print("Player hit a trap!")
@@ -124,8 +120,10 @@ def EndOfRound(g):
             g.player_money_values[g.round_bets[i][1]] += second_place_payout
             if display_updates : print("Paid Player " + str(g.round_bets[i][1]) + " " + str(third_or_worse_place_payout) + " coins for selecting the a third place or worse camel")
     g.camel_bet_values = [5,5,5,5,5] #Reset camel bet values and camels yet to move
-    g.camel_yet_to_move = [1,1,1,1,1]
+    g.camel_yet_to_move = [True,True,True,True,True]
     g.round_bets = [] #clear round bets
+    g.trap_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+    g.player_has_placed_trap = [False,False,False,False]
     return
 
 def EndOfGame(g):
@@ -197,9 +195,9 @@ def DisplayTrackState(track):
     print(track_label_string)
 
     #Print blank line
-    track_label_string = "\t|"
-    for _ in range(0,finish_line): track_label_string += ("----")
-    print(track_label_string+"-|")
+    track_label_string = "\t"
+    for i in range(0,finish_line): track_label_string += ("---"+"-"*len(str(i)))
+    print(track_label_string+"-")
 
     #Print N/A if there are no objects (camels/traps)
     if max_stack == 0:
@@ -218,9 +216,9 @@ def DisplayTrackState(track):
         print(track_string+"|")
 
     #Print blank line again
-    track_label_string = "\t|"
-    for _ in range(0,finish_line): track_label_string += ("----")
-    print(track_label_string+"-|")
+    track_label_string = "\t"
+    for i in range(0,finish_line): track_label_string += ("---"+"-"*len(str(i)))
+    print(track_label_string+"-")
 
     #Print milestones again
     track_label_string = "\t|"
