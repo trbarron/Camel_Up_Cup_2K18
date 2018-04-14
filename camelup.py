@@ -1,5 +1,5 @@
 import random, copy, math, uuid, hashlib
-import players
+from players import Player0, Player1, Player2, Player3
 
 camels = [0,1,2,3,4]
 num_camels = len(camels)
@@ -9,17 +9,17 @@ display_updates = True
 
 class GameState:
     def __init__(self):
-        self.camel_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
-        self.trap_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]] #entry of the form [trap_type (-1,1), player]
+        self.camel_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+        self.trap_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]] #entry of the form [trap_type (-1,1), player]
         self.player_has_placed_trap = [False,False,False,False]
         self.round_bets = []		#of the form [camel,player]
         self.game_winner_bets = []			#of the form [camel,player]
         self.game_loser_bets = []			#of the form [camel,player]
-        self.player_round_bets = []
         self.player_game_bets = [[],[],[],[]]
         self.player_money_values = [2,2,2,2]
         self.camel_yet_to_move = [True,True,True,True,True]
         self.active_game = True
+        self.game_winner = []
         self.camels = camels
         
         initial_camels = copy.deepcopy(camels)
@@ -29,16 +29,15 @@ class GameState:
                 self.camel_track[distance].append(initial_camels[index])
                 initial_camels.remove(initial_camels[index])
 
-def GameModerator():
-    def players_definitions(player,game):
-        if player == 0:
-            return players.Player0(player,game)
-        elif player == 1:
-            return players.Player1(player,game)
-        elif player == 2:
-            return players.Player2(player,game)
-        elif player == 3:
-            return players.Player3(player,game)
+class PlayerInterface():
+    """Some description that tells you it's abstract,
+    often listing the methods you're expected to supply."""
+    def move( self ):
+        raise NotImplementedError( "Should have implemented this" )
+
+
+def PlayGame(player0,player1,player2,player3):
+    players = [player0.move,player1.move,player2.move,player3.move]
 
     def action(result,player):
         if display_updates: print("Player Action: " + str(result))
@@ -69,14 +68,14 @@ def GameModerator():
     g_round = 0
     while g.active_game:
         active_player = (g_round%4)
-        action(players_definitions(active_player,g),active_player)
+        action(players[active_player](active_player,copy.deepcopy(g)),active_player)
         g_round += 1
         if display_updates:
             DisplayGamestate(g)
     print("$ Totals:")
     print("\t" + str(g.player_money_values))
-    print("g_round: " + str(g_round))
-    return
+    print("Winner: " + str(g.game_winner))
+    return g.game_winner
 
 
 def MoveCamel(g,player):
@@ -141,7 +140,7 @@ def PlaceGameWinnerBet(g,camel,player):
     #Check to see if they are betting on a camel they've already bet on
     for i in range(0,len(g.player_game_bets[player])):
         if check_bet(g.player_game_bets[player][i],str(camel)):
-            print(str(player) + ' tried to bet on a camel winning that theyd already bet on!')
+            if display_updates : print(str(player) + ' tried to bet on a camel winning that theyd already bet on!')
             return False
     g.game_winner_bets.append([hash_bet(str(camel)),player])
     g.player_game_bets[player].append(hash_bet(str(camel)))
@@ -151,7 +150,7 @@ def PlaceGameLoserBet(g,camel,player):
     #Check to see if they are betting on a camel they've already bet on
     for i in range(0,len(g.player_game_bets[player])):
         if check_bet(g.player_game_bets[player][i],str(camel)):
-            print(str(player) + ' tried to bet on a camel winning that theyd already bet on!')
+            if display_updates : print(str(player) + ' tried to bet on a camel winning that theyd already bet on!')
             return False
     g.game_loser_bets.append([hash_bet(str(camel)),player])
     g.player_game_bets[player].append(hash_bet(str(camel)))
@@ -229,9 +228,10 @@ def EndOfGame(g):
             payout_index += 1 #decrease value of guessing winning camel
         else:
             g.player_money_values[g.game_loser_bets[i][1]] -= 1
-            if display_updates : print("Paid Player " + str(g.game_winner_bets[i][1]) + " -1 coins for incorrectly selecting the game loser")
+            if display_updates : print("Paid Player " + str(g.game_loser_bets[i][1]) + " -1 coins for incorrectly selecting the game loser")
 
     g.active_game = False
+    g.game_winner = [i for i, j in enumerate(g.player_money_values) if j == max(g.player_money_values)]
     return True
 
 def FindCamelInNthPlace(track,n):
@@ -292,8 +292,8 @@ def DisplayTrackState(track):
     track_label_string = "\t"
     for i in range(0,finish_line): track_label_string += ("---"+"-"*len(str(i)))
     print(track_label_string+"-")
-
     #Print milestones again
+
     track_label_string = "\t|"
     for _ in range(0,finish_line): track_label_string += ("-" + str(_) + "-|")
     print(track_label_string)
@@ -308,4 +308,4 @@ def check_bet(hashed_bet, user_bet):
     return bet == hashlib.sha256(salt.encode() + user_bet.encode()).hexdigest()
 
 
-GameModerator()
+winner = PlayGame(Player0,Player1,Player2,Player3)
