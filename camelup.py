@@ -93,7 +93,7 @@ def MoveCamel(g,player):
     stack = len(g.camel_track[curr_pos])-found_y_pos
     distance = random.randint(1,3)
 
-    stack_from_bottom = True
+    stack_from_bottom = False
     if (len(g.trap_track[curr_pos + distance]) > 0):
         if display_updates : print("Player hit a trap!")
         if g.trap_track[curr_pos + distance][0] == -1:
@@ -192,7 +192,7 @@ def EndOfRound(g):
     g.camel_bet_values = [5,5,5,5,5] #Reset camel bet values and camels yet to move
     g.camel_yet_to_move = [True,True,True,True,True]
     g.round_bets = [] #clear round bets
-    g.trap_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+    g.trap_track = [[] for i in range(29)] #entry of the form [trap_type (-1,1), player]
     g.player_has_placed_trap = [False,False,False,False]
     return
 
