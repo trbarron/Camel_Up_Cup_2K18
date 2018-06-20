@@ -1,16 +1,16 @@
 import random, copy, math, uuid, hashlib
-from players import Player0, Player1, Player2
+from players import Player0, Player1, Player2, Sir_Humpfree_Bogart
 
 camels = [0,1,2,3,4]
 num_camels = len(camels)
 num_players = 4
 finish_line = 16
-display_updates = True
+display_updates = False
 
 class GameState:
     def __init__(self):
-        self.camel_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
-        self.trap_track = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]] #entry of the form [trap_type (-1,1), player]
+        self.camel_track = [[] for i in range(29)]
+        self.trap_track = [[] for i in range(29)] #entry of the form [trap_type (-1,1), player]
         self.player_has_placed_trap = [False,False,False,False]
         self.round_bets = []		#of the form [camel,player]
         self.game_winner_bets = []			#of the form [camel,player]
@@ -72,9 +72,9 @@ def PlayGame(player0,player1,player2,player3):
         g_round += 1
         if display_updates:
             DisplayGamestate(g)
-    print("$ Totals:")
-    print("\t" + str(g.player_money_values))
-    print("Winner: " + str(g.game_winner))
+    if display_updates: print("$ Totals:")
+    if display_updates: print("\t" + str(g.player_money_values))
+    if display_updates: print("Winner: " + str(g.game_winner))
     return g.game_winner
 
 
@@ -308,4 +308,15 @@ def check_bet(hashed_bet, user_bet):
     return bet == hashlib.sha256(salt.encode() + user_bet.encode()).hexdigest()
 
 
-winner = PlayGame(Player0,Player1,Player2,Player2)
+player_pool = [Player0, Player1, Player2, Sir_Humpfree_Bogart]
+player_points = [0 for i in range(len(player_pool))]
+
+for game in range(math.ceil(len(player_pool))*100):
+    order = [i for i in range(len(player_pool))]
+    random.shuffle(order)
+    winner = PlayGame(player_pool[order[0]],player_pool[order[1]],player_pool[order[2]],player_pool[order[3]])
+    for num_winners in winner: player_points[order[num_winners]] += 1
+    if sum(player_points)%10 == 0:
+        print("---")
+        for i in range(len(player_pool)):
+            print("Player " + str(player_pool[i]) + " has " + str(player_points[i]) + " points.")

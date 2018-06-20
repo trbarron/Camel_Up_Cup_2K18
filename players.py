@@ -267,8 +267,6 @@ class Sir_Humpfree_Bogart(PlayerInterface):
                 [game_winners,winner_flag] = CheckForGameWinners(track,game_winners)
                 depth += 1          
             game_losers = CheckForGameLosers(track,game_losers)
-        print("Game Winners: " +str(game_winners))
-        print("Game Loser: " +str(game_losers))
             
         #Operate on these things i have now... doing little tests to see whats if I should bet or not
             
@@ -314,12 +312,9 @@ class Sir_Humpfree_Bogart(PlayerInterface):
 
         #GameLosers EV
         runs = game_losers[5]
-        print("runs: " + str(runs))
-        print(nearness_to_end)
         del game_losers[5]
         backrunner = game_losers.index(max(game_losers))
         chance = game_losers[backrunner] *nearness_to_end / runs
-        print("chance: " + str(chance))
         #higher the chance to win, the lower the likely payout.
 
         #currently just going with the chance that its a winner...
@@ -341,8 +336,6 @@ class Sir_Humpfree_Bogart(PlayerInterface):
         if fEV > best_move[1]:
             best_move[0] = [4,backrunner]
             best_move[1] = fEV
-
-        print(best_move)
         
         return best_move[0]
 
