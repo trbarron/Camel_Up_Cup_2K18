@@ -1,5 +1,6 @@
 import random, copy, math, uuid, hashlib
-from players import Player0, Player1, Player2, Sir_Humpfree_Bogart
+from players import Player0, Player1, Player2
+from Sir_Humpfree_Bogart import Sir_Humpfree_Bogart
 
 camels = [0,1,2,3,4]
 num_camels = len(camels)
@@ -311,7 +312,7 @@ def check_bet(hashed_bet, user_bet):
 player_pool = [Player0, Player1, Player2, Sir_Humpfree_Bogart]
 player_points = [0 for i in range(len(player_pool))]
 
-for game in range(math.ceil(len(player_pool))*100):
+for game in range(math.ceil(len(player_pool)/10)*100):
     order = [i for i in range(len(player_pool))]
     random.shuffle(order)
     winner = PlayGame(player_pool[order[0]],player_pool[order[1]],player_pool[order[2]],player_pool[order[3]])
