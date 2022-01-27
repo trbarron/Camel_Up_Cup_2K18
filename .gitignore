@@ -46,6 +46,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-neat/*
+# neat/*
 camelupcup/*
 __pycache__/*
