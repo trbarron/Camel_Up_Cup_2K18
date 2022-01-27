@@ -19,8 +19,8 @@ P1_Is_AI = False
 
 
 # Constants
+WIDTH, HEIGHT = 1280, 960
 WIDTH, HEIGHT = 640, 480
-NETWORK_WIDTH = 480
 
 # Flags
 AI = True
@@ -35,18 +35,23 @@ YELLOW = (255, 255, 0)
 # ----------------- #
 def generate_net(current, nodes):
     # Generate the neural network to be displayed
+    iInput = 0
+    iOutput = 0
     for i in current.get_nodes():
         if current.is_input(i):
             color = (0, 0, 255)
             x = 50
-            y = 140 + i*60
+            y = int(HEIGHT / 4 + ((iInput / 25) * (HEIGHT / 2))) 
+            iInput += 1
         elif current.is_output(i):
             color = (255, 0, 0)
-            x = NETWORK_WIDTH-50
-            y = HEIGHT/2
+            x = WIDTH-50
+            y = int(HEIGHT / 6 + ((iOutput / 48) * (HEIGHT * 2 / 3))) 
+            iOutput += 1
+
         else:
             color = (0, 0, 0)
-            x = random.randint(NETWORK_WIDTH/3, int(NETWORK_WIDTH * (2.0/3)))
+            x = random.randint(WIDTH/3, int(WIDTH * (2.0/3)))
             y = random.randint(20, HEIGHT-20)
         nodes[i] = [(int(x), int(y)), color]
 
@@ -56,14 +61,15 @@ def render_net(current, display, nodes):
     for edge in genes:
         if genes[edge].enabled: # Enabled or disabled edge
             color = (0, 255, 0)
+        
         else:
             color = (255, 0, 0)
 
-        pygame.draw.line(display, color, nodes[edge[0]][0], nodes[edge[1]][0], 3)
+        # pygame.draw.line(display, color, nodes[edge[0]][0], nodes[edge[1]][0], 1)
 
     for n in nodes:
-        pygame.draw.circle(display, nodes[n][1], nodes[n][0], 7)
-
+        pygame.draw.circle(display, nodes[n][1], nodes[n][0], 5)
+        
 def convertGamestateToInputs(g, playerPos):
     '''
         self.camel_track = [[] for i in range(29)]
@@ -639,30 +645,12 @@ def check_bet(hashed_bet, user_bet):
     bet, salt = hashed_bet.split(':')
     return bet == hashlib.sha256(salt.encode() + user_bet.encode()).hexdigest()
 
-
-# games_to_play = 20
-# player_pool = [Player0, Player1]
-# player_points = [0 for i in range(len(player_pool))]
-
-# for game in range(math.ceil(len(player_pool)/10)*games_to_play):
-#     order = [i for i in range(len(player_pool))]
-#     random.shuffle(order)
-#     winner = PlayGame(player_pool[order[0]],player_pool[order[1]])
-#     for num_winners in winner: player_points[order[num_winners]] += 1
-#     if sum(player_points)%10 == 0:
-#         print("---")
-#         for i in range(len(player_pool)):
-#             print("Player " + str(player_pool[i]) + " has " + str(player_points[i]) + " points.")
-
-
-
 def main():
     # Main game function
     if DRAW_NETWORK:
         pygame.init()
-        display = pygame.display.set_mode((NETWORK_WIDTH, HEIGHT), 0, 32)
-        network_display = pygame.Surface((NETWORK_WIDTH, HEIGHT))
-        clock = pygame.time.Clock()
+        display = pygame.display.set_mode((WIDTH, HEIGHT), 0, 32)
+        # clock = pygame.time.Clock()
 
 
     # Load the camel's brain
@@ -687,16 +675,12 @@ def main():
         P1Current = Player0
 
     P0Current = P0Brain.get_current()
-    inputs = [0] * 25
-    output = [0] * 48
     nodes = {}
 
     generate_net(P0Current, nodes)
 
     if P1_Is_AI:
         P1Current = P1Brain.get_current()
-        generate_net(P1Current, nodes)
-
 
     print("Loaded... starting")
 
@@ -704,10 +688,9 @@ def main():
     while True:
         # Main loop
         if DRAW_NETWORK: 
-            display.fill(BLACK)
-            network_display.fill(WHITE)
+            display.fill(WHITE)
 
-        games_to_play = 20
+        games_to_play = 100
         player_pool = [P0Current, P1Current]
         player_points = [0 for i in range(len(player_pool))]
 
@@ -717,13 +700,11 @@ def main():
             winner = PlayGame(player_pool[order[0]],player_pool[order[1]])
             for num_winners in winner: player_points[order[num_winners]] += 1
             
-        # for i in range(len(player_pool)):
-        #     print("Player " + str(player_pool[i]) + " has " + str(player_points[i]) + " points.")
-
         P0Current.set_fitness(float(player_points[0] / games_to_play))
 
-        if DRAW_NETWORK:
-            render_net(P0Current, network_display, nodes)
+        # Weird handicap I'm adding if you are playing a dumb bot
+        if not P1_Is_AI: P0Current.set_fitness(float(player_points[0] / (games_to_play * 2)))
+            
         if gamesPlayed % 10 == 0:
             print("Fitness: ", float(player_points[0] / games_to_play))
             print("Generation: ", P0Brain.get_generation()+1)
@@ -733,31 +714,30 @@ def main():
                 P0Current.set_fitness(0)
                 P1Brain = neat.Brain.load('camelupbrain_1')
                 P1Current = P1Brain.get_current()
-                generate_net(P1Current, nodes)
-
-        # These happen on a game end
-
-        # Save the bird's brain
+                
+        # Save the camel's brain
         P0Brain.save('camelupbrain_0')
         P0Brain.next_iteration()
         P0Current = P0Brain.get_current()
 
-        # Restart the game
-        generate_net(P0Current, nodes)
 
         # Update display and its caption
-        if DRAW_NETWORK:
-            display.blit(network_display, (WIDTH, 0))
-            pygame.display.set_caption("GNRTN : {0}; SPC : {1}; CRRNT : {2}; FIT : {3}".format(
-                                                P0Brain.get_generation()+1, 
-                                                P0Brain.get_current_species()+1, 
-                                                P0Brain.get_current_genome()+1,
-                                                P0Brain.get_fittest().get_fitness(),
-                                                # round(output, 48),
-                                                # [round(i, 48) for i in inputs]
-            ))
+        if DRAW_NETWORK and gamesPlayed % 100 == 0:
+            generate_net(P0Current, nodes)
+            render_net(P0Current, display, nodes)
+
+            # display.blit(network_display, (WIDTH, 0))
+            # pygame.display.set_caption("GNRTN : {0}; SPC : {1}; CRRNT : {2}; FIT : {3}".format(
+            #                                     P0Brain.get_generation()+1, 
+            #                                     P0Brain.get_current_species()+1, 
+            #                                     P0Brain.get_current_genome()+1,
+            #                                     P0Brain.get_fittest().get_fitness(),
+            #                                     # round(output, 48),
+            #                                     # [round(i, 48) for i in inputs]
+            # ))
+            print("updating!!")
+            print("nodes len: ", len(nodes))
             pygame.display.update()
-            clock.tick(1)
 
         gamesPlayed += 1
 
