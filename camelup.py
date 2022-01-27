@@ -4,9 +4,8 @@ from Sir_Humpfree_Bogart import Sir_Humpfree_Bogart
 import sys
 import os
 import random
-import pygame
-from pygame.locals import *
 from neat import neat
+import drawSvg as draw
 
 camels = [0,1,2,3,4]
 num_camels = len(camels)
@@ -14,13 +13,13 @@ num_players = 2
 finish_line = 16
 display_updates = False
 
-P0_Is_AI = True
-P1_Is_AI = False
+turnTimer = 200
 
+P0_Is_AI = True
+P1_Is_AI = True
 
 # Constants
-WIDTH, HEIGHT = 1280, 960
-WIDTH, HEIGHT = 640, 480
+WIDTH, HEIGHT = 2000, 2000
 
 # Flags
 AI = True
@@ -40,36 +39,63 @@ def generate_net(current, nodes):
     for i in current.get_nodes():
         if current.is_input(i):
             color = (0, 0, 255)
-            x = 50
+            x = WIDTH * (1 / 12)
             y = int(HEIGHT / 4 + ((iInput / 25) * (HEIGHT / 2))) 
             iInput += 1
         elif current.is_output(i):
             color = (255, 0, 0)
-            x = WIDTH-50
+            x = WIDTH * (11 / 12)
             y = int(HEIGHT / 6 + ((iOutput / 48) * (HEIGHT * 2 / 3))) 
             iOutput += 1
 
         else:
             color = (0, 0, 0)
-            x = random.randint(WIDTH/3, int(WIDTH * (2.0/3)))
-            y = random.randint(20, HEIGHT-20)
+            x = random.randint(int(WIDTH/3), int(WIDTH * (2/3)))
+            y = random.randint(int(HEIGHT / 6), int(HEIGHT * (5/6)))
         nodes[i] = [(int(x), int(y)), color]
 
-def render_net(current, display, nodes):
+def render_net_2(current, nodes, brain):
     # Render the current neural network
     genes = current.get_edges()
+    d = draw.Drawing(WIDTH, HEIGHT, origin=(0,0), displayInline=False)
+
+    widthWeight = 4
+    widthOrder = 3
+
     for edge in genes:
         if genes[edge].enabled: # Enabled or disabled edge
-            color = (0, 255, 0)
-        
+            if genes[edge].weight > 0:
+                color = '#008f38'
+            else:
+                color = '#38c4a8'
+            width = abs(genes[edge].weight)** widthOrder * widthWeight
         else:
-            color = (255, 0, 0)
+            color = 'red'
+            width = abs(genes[edge].weight)** widthOrder * widthWeight
 
-        # pygame.draw.line(display, color, nodes[edge[0]][0], nodes[edge[1]][0], 1)
+        node1 = nodes[edge[0]]
+        node2 = nodes[edge[1]]
+
+        x0 = node1[0][0]
+        y0 = node1[0][1]
+
+        x1 = node2[0][0]
+        y1 = node2[0][1]
+
+        d.append(draw.Line(x0, y0, x1, y1,
+            stroke=color, stroke_width=width, fill='none'))
 
     for n in nodes:
-        pygame.draw.circle(display, nodes[n][1], nodes[n][0], 5)
-        
+        d.append(draw.Circle(nodes[n][0][0], nodes[n][0][1], 5,
+            fill=nodes[n][1], stroke_width=0.01, stroke='black'))
+
+    d.append(draw.Text('GNRTN : ' + str(brain.get_generation()+1), 44, (WIDTH / 12), HEIGHT * (29 / 35), fill='black'))
+    d.append(draw.Text('SPC : ' + str(brain.get_current_species()+1), 44, (WIDTH / 12), HEIGHT * (28 / 35), fill='black'))
+    d.append(draw.Text('CRRNT : ' + str(brain.get_current_genome()+1), 44, (WIDTH / 12), HEIGHT * (27 / 35), fill='black'))
+    
+    d.saveSvg('nodeNetwork' + str(brain.get_generation()+1) + '.svg')
+
+
 def convertGamestateToInputs(g, playerPos):
     '''
         self.camel_track = [[] for i in range(29)]
@@ -181,7 +207,7 @@ def convertOutputToAction(output):
             PlaceGameLoserBet(g,result[1],player)
     '''
 
-    thresh = 0.8
+    thresh = 0.5
 
     # roll the die
     if output[0] and output[0] > thresh: return [0]
@@ -246,12 +272,12 @@ class GameState:
     def __init__(self):
         self.camel_track = [[] for i in range(29)]
         self.trap_track = [[] for i in range(29)] #entry of the form [trap_type (-1,1), player]
-        self.player_has_placed_trap = [False,False,False,False]
+        self.player_has_placed_trap = [False] * num_players
         self.round_bets = []		#of the form [camel,player]
         self.game_winner_bets = []			#of the form [camel,player]
         self.game_loser_bets = []			#of the form [camel,player]
-        self.player_game_bets = [[],[],[],[]]
-        self.player_money_values = [2,2,2,2]
+        self.player_game_bets = [[] * num_players]
+        self.player_money_values = [2] * num_players
         self.camel_yet_to_move = [True,True,True,True,True]
         self.active_game = True
         self.game_winner = []
@@ -271,7 +297,7 @@ class PlayerInterface():
         raise NotImplementedError( "Should have implemented this" )
 
 
-def PlayGame(player0,player1):
+def PlayGame(player1, player0):
     if P0_Is_AI and P1_Is_AI:
         players = [player0, player1]
     elif P0_Is_AI and not P1_Is_AI:
@@ -322,10 +348,14 @@ def PlayGame(player0,player1):
 
         elif P1_Is_AI and active_player == 1:
             # Set our inputs
+            inputs = convertGamestateToInputs(g, active_player)\
+
             # Check our outputs
-            output = player1.forward(inputs)[0]
+            output = player1.forward(inputs)
 
             #call action with that output
+            actionValue = convertOutputToAction(output)
+            action(actionValue, 1)
         
         else:
             action(players[active_player](active_player,copy.deepcopy(g)),active_player)
@@ -333,6 +363,10 @@ def PlayGame(player0,player1):
         g_round += 1
         if display_updates:
             DisplayGamestate(g)
+        
+        # Failsafe -- if no one wins after the timer (~200 turns) then no one wins
+        if g_round > turnTimer:
+            return []
     if display_updates: print("$ Totals:")
     if display_updates: print("\t" + str(g.player_money_values))
     if display_updates: print("Winner: " + str(g.game_winner))
@@ -492,6 +526,12 @@ def EndOfGame(g):
             if display_updates : print("Paid Player " + str(g.game_loser_bets[i][1]) + " -1 coins for incorrectly selecting the game loser")
 
     g.active_game = False
+    
+    # If you are playing a 2 player game then don't let anyone win for a tie
+    if num_players == 2:
+        if g.player_money_values[0] == g.player_money_values[1]:
+            return True
+    
     g.game_winner = [i for i, j in enumerate(g.player_money_values) if j == max(g.player_money_values)]
     return True
 
@@ -646,13 +686,6 @@ def check_bet(hashed_bet, user_bet):
     return bet == hashlib.sha256(salt.encode() + user_bet.encode()).hexdigest()
 
 def main():
-    # Main game function
-    if DRAW_NETWORK:
-        pygame.init()
-        display = pygame.display.set_mode((WIDTH, HEIGHT), 0, 32)
-        # clock = pygame.time.Clock()
-
-
     # Load the camel's brain
     if os.path.isfile('camelupbrain_0.neat'):
         P0Brain = neat.Brain.load('camelupbrain_0')
@@ -660,8 +693,8 @@ def main():
         hyperparams = neat.Hyperparameters()
         hyperparams.delta_threshold = 0.75
 
-        hyperparams.mutation_probabilities['node'] = 0.05
-        hyperparams.mutation_probabilities['edge'] = 0.05
+        hyperparams.mutation_probabilities['node'] = 0.1
+        hyperparams.mutation_probabilities['edge'] = 0.1
 
         P0Brain = neat.Brain(25, 48, 100, hyperparams)
         P0Brain.generate()
@@ -684,12 +717,9 @@ def main():
 
     print("Loaded... starting")
 
-    gamesPlayed = 0
     while True:
         # Main loop
-        if DRAW_NETWORK: 
-            display.fill(WHITE)
-
+        
         games_to_play = 100
         player_pool = [P0Current, P1Current]
         player_points = [0 for i in range(len(player_pool))]
@@ -697,49 +727,35 @@ def main():
         for game in range(math.ceil(len(player_pool)/10)*games_to_play):
             order = [i for i in range(len(player_pool))]
             # random.shuffle(order) #TODO: Right now we aren't shuffling the order for my SANITY. We'll change that later
-            winner = PlayGame(player_pool[order[0]],player_pool[order[1]])
-            for num_winners in winner: player_points[order[num_winners]] += 1
+            winner = PlayGame(player_pool[order[1]], player_pool[order[0]])
+            for num_winners in winner:
+                player_points[order[num_winners]] += 1
             
-        P0Current.set_fitness(float(player_points[0] / games_to_play))
+        fitness = float(player_points[0] / games_to_play)
 
         # Weird handicap I'm adding if you are playing a dumb bot
-        if not P1_Is_AI: P0Current.set_fitness(float(player_points[0] / (games_to_play * 2)))
+        if not P1_Is_AI:
+            fitness = float(player_points[0] / (games_to_play * 2))
             
-        if gamesPlayed % 10 == 0:
-            print("Fitness: ", float(player_points[0] / games_to_play))
+        P0Current.set_fitness(fitness)
+            
+        if (P0Brain.get_current_genome()+1) % 100 == 0:
+            print("Fitness: ", fitness)
             print("Generation: ", P0Brain.get_generation()+1)
             
             if P1_Is_AI:
                 P0Brain.save('camelupbrain_1')
-                P0Current.set_fitness(0)
                 P1Brain = neat.Brain.load('camelupbrain_1')
                 P1Current = P1Brain.get_current()
+
+            if DRAW_NETWORK:
+                generate_net(P0Current, nodes)
+                render_net_2(P0Current, nodes, P0Brain)          
                 
         # Save the camel's brain
         P0Brain.save('camelupbrain_0')
         P0Brain.next_iteration()
         P0Current = P0Brain.get_current()
-
-
-        # Update display and its caption
-        if DRAW_NETWORK and gamesPlayed % 100 == 0:
-            generate_net(P0Current, nodes)
-            render_net(P0Current, display, nodes)
-
-            # display.blit(network_display, (WIDTH, 0))
-            # pygame.display.set_caption("GNRTN : {0}; SPC : {1}; CRRNT : {2}; FIT : {3}".format(
-            #                                     P0Brain.get_generation()+1, 
-            #                                     P0Brain.get_current_species()+1, 
-            #                                     P0Brain.get_current_genome()+1,
-            #                                     P0Brain.get_fittest().get_fitness(),
-            #                                     # round(output, 48),
-            #                                     # [round(i, 48) for i in inputs]
-            # ))
-            print("updating!!")
-            print("nodes len: ", len(nodes))
-            pygame.display.update()
-
-        gamesPlayed += 1
 
 
 if __name__ == "__main__":
