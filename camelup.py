@@ -13,10 +13,10 @@ num_players = 2
 finish_line = 16
 display_updates = False
 
-turnTimer = 200
+turnTimer = 100
 
 P0_Is_AI = True
-P1_Is_AI = True
+P1_Is_AI = False
 
 # Constants
 WIDTH, HEIGHT = 2000, 2000
@@ -207,59 +207,59 @@ def convertOutputToAction(output):
             PlaceGameLoserBet(g,result[1],player)
     '''
 
-    thresh = 0.5
+    thresh = max(output)
 
     # roll the die
-    if output[0] and output[0] > thresh: return [0]
+    if output[0] and output[0] == thresh: return [0]
 
     # Make a round winner bet	
-    if output[1] and output[1] > thresh: return [2,0]
-    if output[2] and output[2] > thresh: return [2,1]
-    if output[3] and output[3] > thresh: return [2,2]
-    if output[4] and output[4] > thresh: return [2,3]
-    if output[5] and output[5] > thresh: return [2,4]
+    if output[1] and output[1] == thresh: return [2,0]
+    if output[2] and output[2] == thresh: return [2,1]
+    if output[3] and output[3] == thresh: return [2,2]
+    if output[4] and output[4] == thresh: return [2,3]
+    if output[5] and output[5] == thresh: return [2,4]
 
     # Make a game winner / loser bet	
-    if output[6] and output[6] > thresh: return [3,0]
-    if output[7] and output[7] > thresh: return [3,1]
-    if output[8] and output[8] > thresh: return [3,2]
-    if output[9] and output[9] > thresh: return [3,3]
-    if output[10] and output[10] > thresh: return [3,4]
+    if output[6] and output[6] == thresh: return [3,0]
+    if output[7] and output[7] == thresh: return [3,1]
+    if output[8] and output[8] == thresh: return [3,2]
+    if output[9] and output[9] == thresh: return [3,3]
+    if output[10] and output[10] == thresh: return [3,4]
 
     # Place a trap	
     #   forwards
-    if output[11] and output[11] > thresh: return [1,1,1]
-    if output[12] and output[12] > thresh: return [1,1,2]
-    if output[13] and output[13] > thresh: return [1,1,3]
-    if output[14] and output[14] > thresh: return [1,1,4]
-    if output[15] and output[15] > thresh: return [1,1,5]
-    if output[16] and output[16] > thresh: return [1,1,6]
-    if output[17] and output[17] > thresh: return [1,1,7]
-    if output[18] and output[18] > thresh: return [1,1,8]
-    if output[19] and output[19] > thresh: return [1,1,9]
-    if output[20] and output[20] > thresh: return [1,1,10]
-    if output[21] and output[21] > thresh: return [1,1,11]
-    if output[22] and output[22] > thresh: return [1,1,12]
-    if output[23] and output[23] > thresh: return [1,1,13]
-    if output[24] and output[24] > thresh: return [1,1,14]
-    if output[25] and output[25] > thresh: return [1,1,15]
+    if output[11] and output[11] == thresh: return [1,1,1]
+    if output[12] and output[12] == thresh: return [1,1,2]
+    if output[13] and output[13] == thresh: return [1,1,3]
+    if output[14] and output[14] == thresh: return [1,1,4]
+    if output[15] and output[15] == thresh: return [1,1,5]
+    if output[16] and output[16] == thresh: return [1,1,6]
+    if output[17] and output[17] == thresh: return [1,1,7]
+    if output[18] and output[18] == thresh: return [1,1,8]
+    if output[19] and output[19] == thresh: return [1,1,9]
+    if output[20] and output[20] == thresh: return [1,1,10]
+    if output[21] and output[21] == thresh: return [1,1,11]
+    if output[22] and output[22] == thresh: return [1,1,12]
+    if output[23] and output[23] == thresh: return [1,1,13]
+    if output[24] and output[24] == thresh: return [1,1,14]
+    if output[25] and output[25] == thresh: return [1,1,15]
 
     #   backwards
-    if output[26] and output[26] > thresh: return [1,-1,1]
-    if output[27] and output[27] > thresh: return [1,-1,2]
-    if output[28] and output[28] > thresh: return [1,-1,3]
-    if output[29] and output[29] > thresh: return [1,-1,4]
-    if output[30] and output[30] > thresh: return [1,-1,5]
-    if output[31] and output[31] > thresh: return [1,-1,6]
-    if output[32] and output[32] > thresh: return [1,-1,7]
-    if output[33] and output[33] > thresh: return [1,-1,8]
-    if output[34] and output[34] > thresh: return [1,-1,9]
-    if output[35] and output[35] > thresh: return [1,-1,10]
-    if output[36] and output[36] > thresh: return [1,-1,11]
-    if output[37] and output[37] > thresh: return [1,-1,12]
-    if output[38] and output[38] > thresh: return [1,-1,13]
-    if output[39] and output[39] > thresh: return [1,-1,14]
-    if output[40] and output[40] > thresh: return [1,-1,15]
+    if output[26] and output[26] == thresh: return [1,-1,1]
+    if output[27] and output[27] == thresh: return [1,-1,2]
+    if output[28] and output[28] == thresh: return [1,-1,3]
+    if output[29] and output[29] == thresh: return [1,-1,4]
+    if output[30] and output[30] == thresh: return [1,-1,5]
+    if output[31] and output[31] == thresh: return [1,-1,6]
+    if output[32] and output[32] == thresh: return [1,-1,7]
+    if output[33] and output[33] == thresh: return [1,-1,8]
+    if output[34] and output[34] == thresh: return [1,-1,9]
+    if output[35] and output[35] == thresh: return [1,-1,10]
+    if output[36] and output[36] == thresh: return [1,-1,11]
+    if output[37] and output[37] == thresh: return [1,-1,12]
+    if output[38] and output[38] == thresh: return [1,-1,13]
+    if output[39] and output[39] == thresh: return [1,-1,14]
+    if output[40] and output[40] == thresh: return [1,-1,15]
 
 
     # uh oh we failed to do anything, just roll
@@ -276,7 +276,7 @@ class GameState:
         self.round_bets = []		#of the form [camel,player]
         self.game_winner_bets = []			#of the form [camel,player]
         self.game_loser_bets = []			#of the form [camel,player]
-        self.player_game_bets = [[] * num_players]
+        self.player_game_bets = [[], []]
         self.player_money_values = [2] * num_players
         self.camel_yet_to_move = [True,True,True,True,True]
         self.active_game = True
@@ -433,8 +433,10 @@ def MoveTrap(g,trap_type,trap_place,player):
 
 def PlaceGameWinnerBet(g,camel,player):
     #Check to see if they are betting on a camel they've already bet on
-    for i in range(0,len(g.player_game_bets[player])):
-        if check_bet(g.player_game_bets[player][i],str(camel)):
+    playersBets = g.player_game_bets[player]
+
+    for i in range(0,len(playersBets)):
+        if check_bet(playersBets[i],str(camel)):
             if display_updates : print(str(player) + ' tried to bet on a camel winning that theyd already bet on!')
             return False
     g.game_winner_bets.append([hash_bet(str(camel)),player])
@@ -705,7 +707,8 @@ def main():
         P1_Is_AI = True
     else:
         P1_Is_AI = False
-        P1Current = Player0
+        P1Current = Sir_Humpfree_Bogart
+        print("humpfree")
 
     P0Current = P0Brain.get_current()
     nodes = {}
@@ -720,7 +723,7 @@ def main():
     while True:
         # Main loop
         
-        games_to_play = 100
+        games_to_play = 20
         player_pool = [P0Current, P1Current]
         player_points = [0 for i in range(len(player_pool))]
 

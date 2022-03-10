@@ -75,6 +75,8 @@ class Sir_Humpfree_Bogart(PlayerInterface):
             return game_losers
 
         def check_bet(hashed_bet, user_bet):
+            return hashed_bet == user_bet
+            #TODO: Readd the hashing stuff
             bet, salt = hashed_bet.split(':')
             return bet == hashlib.sha256(salt.encode() + user_bet.encode()).hexdigest()
 
@@ -201,7 +203,9 @@ class Sir_Humpfree_Bogart(PlayerInterface):
         game_winners = [0 for i in range(6)]
         game_losers = [0 for i in range(6)]
         future_sight = 10000
+        future_sight = 200
         depth_cap = 35	
+        depth_cap = 4
         for futurecycles in range(0,future_sight):
             winner_flag = False
             track = deepcopy(hyp_camel_track)

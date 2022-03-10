@@ -7,7 +7,13 @@ import multiprocessing as mp
 
 def sigmoid(x):
     """Return the S-Curve activation of x."""
-    return 1/(1+math.exp(-x))
+    try:
+        return 1/(1+math.exp(-x))
+    except:
+        if x > 0:
+            return 1
+        if x < 0:
+            return 1e-218
 
 def tanh(x):
     """Wrapper function for hyperbolic tangent activation."""
