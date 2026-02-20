@@ -1,6 +1,8 @@
 import random, copy, math, uuid, hashlib
 from players import Player0, Player1, Player2
 from Sir_Humpfree_Bogart import Sir_Humpfree_Bogart
+from ClaudeCamel import ClaudeCamel
+from OpusOmul import OpusOmul
 
 camels = [0,1,2,3,4]
 num_camels = len(camels)
@@ -309,15 +311,16 @@ def check_bet(hashed_bet, user_bet):
     return bet == hashlib.sha256(salt.encode() + user_bet.encode()).hexdigest()
 
 
-player_pool = [Player0, Player1, Player2, Sir_Humpfree_Bogart]
-player_points = [0 for i in range(len(player_pool))]
+if __name__ == '__main__':
+    player_pool = [Player0, OpusOmul, Sir_Humpfree_Bogart, ClaudeCamel]
+    player_points = [0 for i in range(len(player_pool))]
 
-for game in range(math.ceil(len(player_pool)/10)*100):
-    order = [i for i in range(len(player_pool))]
-    random.shuffle(order)
-    winner = PlayGame(player_pool[order[0]],player_pool[order[1]],player_pool[order[2]],player_pool[order[3]])
-    for num_winners in winner: player_points[order[num_winners]] += 1
-    if sum(player_points)%10 == 0:
-        print("---")
-        for i in range(len(player_pool)):
-            print("Player " + str(player_pool[i]) + " has " + str(player_points[i]) + " points.")
+    for game in range(math.ceil(len(player_pool)/10)*100):
+        order = [i for i in range(len(player_pool))]
+        random.shuffle(order)
+        winner = PlayGame(player_pool[order[0]],player_pool[order[1]],player_pool[order[2]],player_pool[order[3]])
+        for num_winners in winner: player_points[order[num_winners]] += 1
+        if sum(player_points)%10 == 0:
+            print("---")
+            for i in range(len(player_pool)):
+                print("Player " + str(player_pool[i]) + " has " + str(player_points[i]) + " points.")
