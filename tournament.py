@@ -44,6 +44,13 @@ from camelup import (
 from players import Player0, Player1, Player2
 from Sir_Humpfree_Bogart import Sir_Humpfree_Bogart
 from ClaudeCamel import ClaudeCamel
+from GeminiGerry import GeminiGerry
+from OpusOmul import OpusOmul
+from TrainingOpponent import TrainingOpponent
+try:
+    from NeatCamel import NeatCamel
+except Exception:
+    NeatCamel = None
 
 # ── Registry ──────────────────────────────────────────────────────────────────
 # Any bot whose file doesn't exist yet is silently excluded at runtime.
@@ -60,8 +67,10 @@ _KNOWN_BOTS = [
     ("Player2",      Player2),
     ("Sir_Humpfree", Sir_Humpfree_Bogart),
     ("ClaudeCamel",  ClaudeCamel),
-    # Add new bots here as (name, class) or use _try_import for optional ones:
-    ("OpusOmul",     _try_import("OpusOmul", "OpusOmul")),
+    ("GeminiGerry",  GeminiGerry),
+    ("OpusOmul",         OpusOmul),
+    ("TrainingOpponent", TrainingOpponent),
+    ("NeatCamel",        NeatCamel),
 ]
 
 BOT_REGISTRY = {name: cls for name, cls in _KNOWN_BOTS if cls is not None}
@@ -73,6 +82,8 @@ BOT_COLORS = {
     "Sir_Humpfree": "magenta",
     "ClaudeCamel":  "bold red",
     "OpusOmul":     "bright_blue",
+    "GeminiGerry":  "bright_green",
+    "NeatCamel":    "bold magenta",
 }
 
 ACTION_KEYS   = ["roll", "round_bet", "game_win", "game_lose", "trap"]
@@ -84,7 +95,7 @@ ACTION_MAP    = {0: "roll", 1: "trap", 2: "round_bet", 3: "game_win", 4: "game_l
 def init_stats(names):
     return {
         name: {
-            "wins":        0,
+            "wins":        0.0,   # fractional: ties split evenly
             "games":       0,
             "coins_total": 0,
             "times_ms":    [],
@@ -117,9 +128,9 @@ def _take_action(result, seat, g):
         MoveCamel(g, seat)
 
 
-def run_game(bots, names, stats, profile_name=None):
+def run_game(bots, names, stats, seat_stats, profile_name=None):
     """
-    Play one complete game. Updates `stats` in place.
+    Play one complete game. Updates `stats` and `seat_stats` in place.
     Returns (list[winner_name], num_turns).
     """
     n = len(bots)
@@ -166,8 +177,12 @@ def run_game(bots, names, stats, profile_name=None):
     for seat, name in enumerate(game_names):
         stats[name]["games"]       += 1
         stats[name]["coins_total"] += g.player_money_values[seat]
+        seat_stats[seat]["games"]  += 1
+        seat_stats[seat]["coins_total"] += g.player_money_values[seat]
         if seat in winners:
-            stats[name]["wins"] += 1
+            share = 1 / len(winners)
+            stats[name]["wins"]       += share
+            seat_stats[seat]["wins"]  += share
 
     return [game_names[w] for w in winners], turn
 
@@ -199,7 +214,7 @@ def leaderboard_table(stats):
         t.add_row(
             medals.get(rank, f" {rank} "),
             _colored(name),
-            str(s["wins"]),
+            f"{s['wins']:.1f}",
             str(g),
             f"{100 * s['wins'] / g:.1f}%" if g else "—",
             f"{s['coins_total'] / g:.1f}"  if g else "—",
@@ -222,6 +237,30 @@ def action_table(stats):
         t.add_row(
             _colored(name),
             *[f"{100 * s['actions'].get(k, 0) / total:.0f}%" for k in ACTION_KEYS],
+        )
+    return t
+
+
+def seat_table(seat_stats):
+    t = Table(box=box.ROUNDED, expand=True, header_style="bold dim")
+    t.add_column("Seat",      justify="center", width=6)
+    t.add_column("Goes",      min_width=10)
+    t.add_column("Wins",      justify="right")
+    t.add_column("Games",     justify="right")
+    t.add_column("Win %",     justify="right")
+    t.add_column("Avg Coins", justify="right")
+
+    labels = ["1st", "2nd", "3rd", "4th"]
+    for seat in range(4):
+        s = seat_stats[seat]
+        g = s["games"]
+        t.add_row(
+            str(seat),
+            labels[seat],
+            f"{s['wins']:.1f}",
+            str(g),
+            f"{100 * s['wins'] / g:.1f}%" if g else "—",
+            f"{s['coins_total'] / g:.1f}"  if g else "—",
         )
     return t
 
@@ -304,9 +343,10 @@ def main():
         Console().print("[bold red]Need at least 2 bots.[/bold red]")
         return
 
-    stats   = init_stats(selected)
-    recent  = []
-    t_start = time.time()
+    stats      = init_stats(selected)
+    seat_stats = {i: {"wins": 0.0, "games": 0, "coins_total": 0} for i in range(4)}
+    recent     = []
+    t_start    = time.time()
 
     with Live(
         build_display(stats, 0, args.games, recent, t_start),
@@ -314,7 +354,7 @@ def main():
         screen=False,
     ) as live:
         for game_num in range(1, args.games + 1):
-            winners, turns = run_game(bots, selected, stats, profile_name=args.profile)
+            winners, turns = run_game(bots, selected, stats, seat_stats, profile_name=args.profile)
             recent.append({"num": game_num, "winners": winners, "turns": turns})
             live.update(build_display(stats, game_num, args.games, recent, t_start))
 
@@ -340,6 +380,10 @@ def main():
     console.print()
     console.print(Rule("[bold white]Action Distribution[/bold white]"))
     console.print(action_table(stats))
+
+    console.print()
+    console.print(Rule("[bold white]Seat Order Advantage[/bold white]"))
+    console.print(seat_table(seat_stats))
 
     console.print()
     console.print(Rule("[bold white]Move Timing[/bold white]"))

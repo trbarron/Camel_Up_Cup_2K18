@@ -142,26 +142,39 @@ class ClaudeCamel(PlayerInterface):
         # GAME WINNER / LOSER: Monte Carlo over full games
         # Note: SHB bug fixed — start from g.camel_track, not stale hyp_track
         # ================================================================
-        MC_RUNS = 2500
+        MC_RUNS = 800
         win_counts = [0] * NUM_CAMELS
         lose_counts = [0] * NUM_CAMELS
 
-        for _ in range(MC_RUNS):
-            track = copy_track(g.camel_track)
-            trap = copy_trap(g.trap_track)
-            pos_map = build_pos_map(track)
-            yet_to_move = list(g.camel_yet_to_move)
-            depth = 0
+        # Pre-generate all dice rolls for the MC loop (one bulk call vs
+        # ~64K individual randint calls).
+        _MAX_DEPTH = 64
+        _dice      = random.choices((1, 2, 3), k=MC_RUNS * _MAX_DEPTH)
+        _di        = 0
+        _randrange = random.randrange
 
-            while not is_over(pos_map) and depth < 80:
+        for _ in range(MC_RUNS):
+            track      = copy_track(g.camel_track)
+            trap       = copy_trap(g.trap_track)
+            pos_map    = build_pos_map(track)
+            yet_to_move = list(g.camel_yet_to_move)
+            depth      = 0
+
+            while not is_over(pos_map) and depth < _MAX_DEPTH:
                 bank = [i for i in range(NUM_CAMELS) if yet_to_move[i]]
                 if not bank:
                     yet_to_move = [True] * NUM_CAMELS
-                    trap = [[] for _ in range(TRACK_LEN)]
-                    bank = list(range(NUM_CAMELS))
-                c = random.choice(bank)
+                    trap        = [[] for _ in range(TRACK_LEN)]
+                    bank        = list(range(NUM_CAMELS))
+                # Swap-and-pop gives O(1) removal; _randrange is a bound
+                # method (avoids attribute lookup on every iteration).
+                idx = _randrange(len(bank))
+                c   = bank[idx]
+                bank[idx] = bank[-1]
+                bank.pop()
                 yet_to_move[c] = False
-                sim_move(c, random.randint(1, 3), track, trap, pos_map)
+                sim_move(c, _dice[_di], track, trap, pos_map)
+                _di   += 1
                 depth += 1
 
             win_counts[find_nth(track, 1)] += 1

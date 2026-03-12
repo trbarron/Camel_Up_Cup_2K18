@@ -3,7 +3,6 @@ from playerinterface import PlayerInterface
 class Sir_Humpfree_Bogart(PlayerInterface):
     def move(player,g):
         from itertools import permutations
-        from copy import deepcopy
         from math import floor
         import uuid, hashlib
         import random
@@ -12,7 +11,16 @@ class Sir_Humpfree_Bogart(PlayerInterface):
         display_updates = False
         
         def MoveCamel(selected_camel,move_dist,hyp_camel_track,g):
-            [curr_pos,found_y_pos] = [(ix,iy) for ix, row in enumerate(hyp_camel_track) for iy, i in enumerate(row) if i == selected_camel][0] #Find distance, check for traps
+            # Use list.index() (C-speed) + early-exit outer loop instead of a
+            # full list-comprehension that allocates a list of all matches.
+            curr_pos = found_y_pos = None
+            for ix, row in enumerate(hyp_camel_track):
+                try:
+                    found_y_pos = row.index(selected_camel)
+                    curr_pos = ix
+                    break
+                except ValueError:
+                    pass
             stack = len(hyp_camel_track[curr_pos])-found_y_pos
             distance = move_dist
 
@@ -59,14 +67,16 @@ class Sir_Humpfree_Bogart(PlayerInterface):
             return False
                     
         def CheckForGameWinners(camel_track,game_winners):
-            winner_flag = False
-            for i in range(finish_line,len(camel_track)):
-                if len(camel_track[i]) > 0:
-                    winning_camel = FindCamelInNthPlace(camel_track,1)
-                    game_winners[winning_camel] += 1
-                    winner_flag = True
+            # Scan backward from end: first non-empty cell past finish_line
+            # holds the leader at the top of its stack.  This is O(track_tail)
+            # with early exit, vs the old O(track_len) forward scan +
+            # FindCamelInNthPlace(entire_track) on every call.
             game_winners[5] += 1
-            return [game_winners,winner_flag]
+            for i in range(len(camel_track)-1, finish_line-1, -1):
+                if camel_track[i]:
+                    game_winners[camel_track[i][-1]] += 1
+                    return [game_winners, True]
+            return [game_winners, False]
 
         def CheckForGameLosers(camel_track,game_losers):
             loser_camel = FindCamelInNthPlace(camel_track,5)
@@ -90,7 +100,7 @@ class Sir_Humpfree_Bogart(PlayerInterface):
         if display_updates: print("num_camels_to_move : " + str(num_camels_to_move))
         for perm in permutations(camels_to_move,num_camels_to_move):
             for move_combinations in range(0,3**num_camels_to_move):
-                hyp_camel_track = deepcopy(g.camel_track)
+                hyp_camel_track = [list(row) for row in g.camel_track]
                 for moves in range(0,num_camels_to_move):
                     dist_to_move = (floor(move_combinations/(3**moves))%3)+1
                     hyp_camel_track = MoveCamel(perm[moves],dist_to_move,hyp_camel_track,g)
@@ -200,25 +210,35 @@ class Sir_Humpfree_Bogart(PlayerInterface):
 
         game_winners = [0 for i in range(6)]
         game_losers = [0 for i in range(6)]
-        future_sight = 10000
-        depth_cap = 35	
+        future_sight = 2000
+        depth_cap = 35
+        # Pre-generate all dice rolls to replace per-iteration randint calls.
+        _dice = random.choices((1,2,3), k=future_sight * depth_cap)
+        _di   = 0
+        _randrange = random.randrange
+
         for futurecycles in range(0,future_sight):
             winner_flag = False
-            track = deepcopy(hyp_camel_track)
-            camel_bank = camels_to_move
+            track = [list(row) for row in hyp_camel_track]
+            # Start with all camels each MC run.  (The original code aliased
+            # camels_to_move here, which got corrupted on the first run and
+            # silently reset to [0..4] every subsequent run anyway.)
+            camel_bank = [0,1,2,3,4]
 
             depth = 0
             while not winner_flag and (depth < depth_cap):
-                if len(camel_bank) == 0:
+                if not camel_bank:
                     camel_bank = [0,1,2,3,4]
-                moving_index = random.randint(0,len(camel_bank)-1)
-                moving_boy = camel_bank[moving_index]
-                del camel_bank[moving_index]
-                boy_distance = random.randint(1,3)
-                track = MoveCamel(moving_boy,boy_distance,track,g)
+                # Swap-and-pop for O(1) removal instead of O(n) del
+                idx = _randrange(len(camel_bank))
+                moving_boy = camel_bank[idx]
+                camel_bank[idx] = camel_bank[-1]
+                camel_bank.pop()
+                track = MoveCamel(moving_boy, _dice[_di], track, g)
+                _di += 1
 
                 [game_winners,winner_flag] = CheckForGameWinners(track,game_winners)
-                depth += 1          
+                depth += 1
             game_losers = CheckForGameLosers(track,game_losers)
             
         #Operate on these things i have now... doing little tests to see whats if I should bet or not
