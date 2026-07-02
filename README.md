@@ -10,7 +10,7 @@ Bots are shuffled into random 4-player games, scores accumulate across many game
 |---|---|---|
 | Move camel | `[0]` | Roll the dice — moves a random camel 1–3 spaces and earns 1 coin |
 | Place/move trap | `[1, trap_type, position]` | Place a +1 or -1 trap on the track; earn 1 coin each time a camel hits it |
-| Round winner bet | `[2, camel]` | Bet on which camel leads at end of the round; pays 5/3/2 coins or -1 |
+| Round winner bet | `[2, camel]` | Bet on which camel leads at end of the round; pays 5/3/2 (first), 1 (second), -1 otherwise |
 | Game winner bet | `[3, camel]` | Bet on the overall game winner; pays 8/5/3/1 coins or -1 |
 | Game loser bet | `[4, camel]` | Bet on the overall game loser; pays 8/5/3/1 coins or -1 |
 
@@ -21,6 +21,7 @@ Bots are shuffled into random 4-player games, scores accumulate across many game
 - **Stacking**: Camels stack on top of each other. When a camel moves, all camels on top of it move with it.
 - **Traps**: `+1` traps boost a camel one extra space; `-1` traps send it one space back and place it *under* the stack at that square.
 - **Rounds**: A round ends when all 5 camels have moved once. Round bets and traps are cleared; a new round begins.
+- **Bet settlement**: Bets settle in the order they were placed. Round bets on the leading camel pay 5/3/2 down the ladder (0 after that); bets on the runner-up pay 1 (first three); every other round bet costs 1 coin. Game winner/loser bets pay 8/5/3/1 down the ladder (1 after that) or -1 if wrong.
 - **Winning**: The player with the most coins when any camel crosses space 16 wins.
 
 ## Adding a Bot
@@ -71,33 +72,32 @@ Your `move(player, g)` method receives:
 g.camel_track             # list of 29 lists; each inner list is a stack of camel IDs (bottom to top)
 g.trap_track              # list of 29 lists; each entry is [trap_type, player] or []
 g.player_has_placed_trap  # [bool x4] — whether each player has an active trap
-g.round_bets              # list of [camel, player] for this round's bets
-g.game_winner_bets        # list of [hashed_camel, player] — game winner bets (hashed!)
-g.game_loser_bets         # list of [hashed_camel, player] — game loser bets (hashed!)
-g.player_game_bets        # [[hashed_camel, ...] x4] — each player's game-level bet hashes
+g.round_bets              # list of [camel, player] for this round's bets (public)
+g.game_winner_bets        # list of [hashed_camel, player]; opponents' entries are [None, player]
+g.game_loser_bets         # list of [hashed_camel, player]; opponents' entries are [None, player]
+g.player_game_bets        # [[hashed_camel, ...] x4]; other players' rows contain None placeholders
 g.player_money_values     # [int x4] — current coin totals
 g.camel_yet_to_move       # [bool x5] — which camels haven't moved this round
 g.camels                  # [0, 1, 2, 3, 4]
 ```
 
-### Fair Play: What You Can and Can't Use
+### What Your Bot Can See
 
-The game state is a deep copy, so you can mutate it freely for simulation purposes. However, there are rules about what information your bot should access:
+Your bot receives a **redacted view** of the game state (built by `camelup.player_view`), so hidden information is enforced by the engine rather than by an honor system. The view is a deep copy — mutate it freely for simulation purposes.
 
-**Fair game (use freely):**
+**Public (use freely):**
 - `g.camel_track` — full board state, camel positions and stacking order
-- `g.trap_track` — all trap positions and types (public information)
+- `g.trap_track` — all trap positions and types
 - `g.player_has_placed_trap` — who has an active trap
-- `g.round_bets` — all round bets placed so far (these are public in the board game)
+- `g.round_bets` — all round bets placed so far (public in the board game)
 - `g.player_money_values` — everyone's coin totals
 - `g.camel_yet_to_move` — which camels still need to roll this round
 - `g.camels` — the list of camel IDs
-- `g.player_game_bets[player]` — **your own** game-level bet hashes (to check what you've already bet on)
-- `len(g.game_winner_bets)` / `len(g.game_loser_bets)` — how many total game bets have been placed (public count)
+- Bet counts and who placed each game bet (`len(g.game_winner_bets)`, the player field of each entry)
 
-**Off limits (don't crack or read):**
-- `g.game_winner_bets` / `g.game_loser_bets` contents — these are hashed specifically so bots can't see which camels other players bet on. You can see the count and which player placed each bet, but **do not** attempt to brute-force the hashes to reveal opponents' camel choices. In the real board game these bets are placed face-down.
-- `g.player_game_bets[other_player]` — other players' game bet hashes. Only inspect your own (`g.player_game_bets[player]`).
+**Hidden (redacted by the engine — you can't read these even if you try):**
+- Opponents' game-bet camel choices. Entries in `g.game_winner_bets` / `g.game_loser_bets` placed by other players appear as `[None, player]`, and `g.player_game_bets[other_player]` contains only `None` placeholders. In the real board game these bets are placed face-down.
+- Your own game bets are present but hashed; decode them with the `check_bet` pattern below.
 
 To check which camels you've already bet on, use the `check_bet` pattern:
 
@@ -119,11 +119,13 @@ for hb in g.player_game_bets[player]:
 
 ### Trap Placement Rules
 
+All of these are enforced by the engine (an illegal placement counts as an invalid action, and your turn becomes a dice roll):
+
 - Traps cannot be placed on space 0
 - Traps cannot be placed adjacent to another trap (unless it's your own being moved)
 - Traps cannot be placed on a space with camels on it
 - Each player can only have one trap on the board at a time
-- `trap_type` must be `1` (boost: +1 space) or `-1` (slow: -1 space, stack underneath)
+- `trap_type` must be `1` (boost: +1 space) or `-1` (slow: -1 space, the hit camel and its riders go under the stack on the destination square)
 
 ### Return Value
 
@@ -137,7 +139,7 @@ Your `move()` must return one of:
 [4, camel]             # Game loser bet (camel: 0–4)
 ```
 
-If your bot crashes or returns an invalid action, the tournament runner falls back to rolling the dice.
+If your bot crashes or returns an invalid action, your turn becomes a dice roll (both runners).
 
 ## Existing Bots
 
@@ -150,6 +152,7 @@ If your bot crashes or returns an invalid action, the tournament runner falls ba
 | `ClaudeCamel` | LLM-refactored version of Sir_Humpfree_Bogart. Fixes several bugs (stale track reference in MC sims, camel bank aliasing), removes the riskiness heuristic in favor of pure EV maximization, and adds performance optimizations (precomputed position maps, bulk dice generation) |
 | `OpusOmul` | Built from scratch by an LLM with no knowledge of existing bot strategies. Uses the same core approach (round enumeration + Monte Carlo game sims) but arrived at it independently. Also evaluates trap placement by estimating landing frequency per space |
 | `GeminiGerry` | Monte Carlo simulation bot that uses `copy.deepcopy` for game sims, biases slightly toward action over rolling, and requires a confidence threshold (>25% win probability) before placing game-level bets |
+| `FableCamel` | Exact enumeration of every way the current round can finish (with state merging), Monte Carlo game sims, settlement-order-aware bet pricing, trap placement valued by the EV shift for itself minus a threat-weighted shift for opponents, and a risk posture that chases variance when trailing late and locks in coins when leading |
 
 ## Running
 

@@ -37,7 +37,7 @@ except ImportError:
     from rich.console import RenderGroup as Group  # rich < 12 compat
 
 from camelup import (
-    GameState,
+    GameState, player_view,
     MoveCamel, PlaceTrap, MoveTrap,
     PlaceRoundWinnerBet, PlaceGameWinnerBet, PlaceGameLoserBet,
 )
@@ -46,11 +46,7 @@ from Sir_Humpfree_Bogart import Sir_Humpfree_Bogart
 from ClaudeCamel import ClaudeCamel
 from GeminiGerry import GeminiGerry
 from OpusOmul import OpusOmul
-from TrainingOpponent import TrainingOpponent
-try:
-    from NeatCamel import NeatCamel
-except Exception:
-    NeatCamel = None
+from FableCamel import FableCamel
 
 # ── Registry ──────────────────────────────────────────────────────────────────
 # Any bot whose file doesn't exist yet is silently excluded at runtime.
@@ -69,8 +65,7 @@ _KNOWN_BOTS = [
     ("ClaudeCamel",  ClaudeCamel),
     ("GeminiGerry",  GeminiGerry),
     ("OpusOmul",         OpusOmul),
-    ("TrainingOpponent", TrainingOpponent),
-    ("NeatCamel",        NeatCamel),
+    ("FableCamel",       FableCamel),
 ]
 
 BOT_REGISTRY = {name: cls for name, cls in _KNOWN_BOTS if cls is not None}
@@ -83,7 +78,7 @@ BOT_COLORS = {
     "ClaudeCamel":  "bold red",
     "OpusOmul":     "bright_blue",
     "GeminiGerry":  "bright_green",
-    "NeatCamel":    "bold magenta",
+    "FableCamel":   "bold yellow",
 }
 
 ACTION_KEYS   = ["roll", "round_bet", "game_win", "game_lose", "trap"]
@@ -146,13 +141,16 @@ def run_game(bots, names, stats, seat_stats, profile_name=None):
         bot  = game_bots[seat]
         name = game_names[seat]
 
-        g_snap = copy.deepcopy(g)
+        g_snap = player_view(g, seat)
 
         if profile_name and name == profile_name:
             pr = cProfile.Profile()
             pr.enable()
             t0     = time.perf_counter()
-            result = bot.move(seat, g_snap)
+            try:
+                result = bot.move(seat, g_snap)
+            except Exception:
+                result = [0]
             ms     = (time.perf_counter() - t0) * 1000
             pr.disable()
             new_ps = pstats.Stats(pr)
@@ -162,7 +160,10 @@ def run_game(bots, names, stats, seat_stats, profile_name=None):
                 stats[name]["profile"].add(new_ps)
         else:
             t0     = time.perf_counter()
-            result = bot.move(seat, g_snap)
+            try:
+                result = bot.move(seat, g_snap)
+            except Exception:
+                result = [0]
             ms     = (time.perf_counter() - t0) * 1000
 
         stats[name]["times_ms"].append(ms)
