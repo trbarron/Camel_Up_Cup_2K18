@@ -1,10 +1,10 @@
 import random, copy, math, uuid, hashlib
-from players import Player0, Player1, Player2
-from Sir_Humpfree_Bogart import Sir_Humpfree_Bogart
-from ClaudeCamel import ClaudeCamel
-from OpusOmul import OpusOmul
-from GeminiGerry import GeminiGerry
-from FableCamel import FableCamel
+from bots.players import Player0, Player1, Player2
+from bots.HandcodedHenry import HandcodedHenry
+from bots.ClaudeCamel import ClaudeCamel
+from bots.OpusOmul import OpusOmul
+from bots.GeminiGerry import GeminiGerry
+from bots.FabelFelix import FabelFelix
 
 camels = [0,1,2,3,4]
 num_camels = len(camels)
@@ -329,7 +329,7 @@ def check_bet(hashed_bet, user_bet):
 
 
 if __name__ == '__main__':
-    player_pool = [Player0, OpusOmul, Sir_Humpfree_Bogart, ClaudeCamel, GeminiGerry, FableCamel]
+    player_pool = [Player0, OpusOmul, HandcodedHenry, ClaudeCamel, GeminiGerry, FabelFelix]
     player_points = [0 for i in range(len(player_pool))]
 
     for game in range(math.ceil(len(player_pool)/10)*100):

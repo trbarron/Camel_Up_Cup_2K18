@@ -1,6 +1,12 @@
+# ---
+# name: tb-HandcodedHenry (fka Sir_Humpfree_Bogart)
+# author: Tyler Barron
+# model: none — hand-coded
+# year: 2018 (won the original Camel Up Cup 2K18)
+# ---
 from playerinterface import PlayerInterface
 
-class Sir_Humpfree_Bogart(PlayerInterface):
+class HandcodedHenry(PlayerInterface):
     def move(player,g):
         from itertools import permutations
         from math import floor

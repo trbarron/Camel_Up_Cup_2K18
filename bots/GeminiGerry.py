@@ -1,3 +1,9 @@
+# ---
+# name: tb-GeminiGerry
+# author: Tyler Barron
+# model: Gemini
+# year: 2026
+# ---
 from playerinterface import PlayerInterface
 import random
 import copy

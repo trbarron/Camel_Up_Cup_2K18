@@ -26,7 +26,7 @@ Bots are shuffled into random 4-player games, scores accumulate across many game
 
 ## Adding a Bot
 
-1. Create a new file, e.g. `MyBot.py`:
+1. Create a new file in `bots/`, e.g. `bots/MyBot.py`:
 
 ```python
 from playerinterface import PlayerInterface
@@ -41,15 +41,15 @@ class MyBot(PlayerInterface):
 2. Import and register your bot. For the basic runner, add it to `camelup.py`:
 
 ```python
-from MyBot import MyBot
+from bots.MyBot import MyBot
 
-player_pool = [Player0, Player1, Player2, Sir_Humpfree_Bogart, MyBot]
+player_pool = [Player0, Player1, Player2, HandcodedHenry, MyBot]
 ```
 
 For the tournament runner (`tournament.py`), import your bot and add it to `_KNOWN_BOTS`:
 
 ```python
-from MyBot import MyBot
+from bots.MyBot import MyBot
 
 _KNOWN_BOTS = [
     # ... existing bots ...
@@ -148,11 +148,11 @@ If your bot crashes or returns an invalid action, your turn becomes a dice roll 
 | `Player0` | Always rolls the dice |
 | `Player1` | Bets on a random round winner if losing, otherwise places a random trap |
 | `Player2` | Always bets on a random round winner |
-| `Sir_Humpfree_Bogart` | Enumerates all possible camel move outcomes for round predictions, runs Monte Carlo simulations for game-level predictions, and adjusts risk tolerance based on standing and proximity to the finish line |
-| `ClaudeCamel` | LLM-refactored version of Sir_Humpfree_Bogart. Fixes several bugs (stale track reference in MC sims, camel bank aliasing), removes the riskiness heuristic in favor of pure EV maximization, and adds performance optimizations (precomputed position maps, bulk dice generation) |
+| `HandcodedHenry` (fka `Sir_Humpfree_Bogart`, 2018) | Enumerates all possible camel move outcomes for round predictions, runs Monte Carlo simulations for game-level predictions, and adjusts risk tolerance based on standing and proximity to the finish line |
+| `ClaudeCamel` | LLM-refactored version of HandcodedHenry. Fixes several bugs (stale track reference in MC sims, camel bank aliasing), removes the riskiness heuristic in favor of pure EV maximization, and adds performance optimizations (precomputed position maps, bulk dice generation) |
 | `OpusOmul` | Built from scratch by an LLM with no knowledge of existing bot strategies. Uses the same core approach (round enumeration + Monte Carlo game sims) but arrived at it independently. Also evaluates trap placement by estimating landing frequency per space |
 | `GeminiGerry` | Monte Carlo simulation bot that uses `copy.deepcopy` for game sims, biases slightly toward action over rolling, and requires a confidence threshold (>25% win probability) before placing game-level bets |
-| `FableCamel` | Exact enumeration of every way the current round can finish (with state merging), Monte Carlo game sims, settlement-order-aware bet pricing, trap placement valued by the EV shift for itself minus a threat-weighted shift for opponents, and a risk posture that chases variance when trailing late and locks in coins when leading |
+| `FabelFelix` (fka `FableCamel`) | Exact enumeration of every way the current round can finish (with state merging), Monte Carlo game sims, settlement-order-aware bet pricing, trap placement valued by the EV shift for itself minus a threat-weighted shift for opponents, and a risk posture that chases variance when trailing late and locks in coins when leading |
 
 ## Running
 

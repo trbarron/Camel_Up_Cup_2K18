@@ -1,3 +1,9 @@
+# ---
+# name: tb-Player0 / tb-Player1 / tb-Player2
+# author: Tyler Barron
+# model: none — hand-coded baselines
+# year: 2018
+# ---
 #Syntax for players is:
 #   [0] : Move Camel
 #   [1,trap_type,trap_location] : Place Trap

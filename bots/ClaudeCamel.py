@@ -1,3 +1,9 @@
+# ---
+# name: tb-ClaudeCamel
+# author: Tyler Barron
+# model: Claude Sonnet
+# year: 2026
+# ---
 from playerinterface import PlayerInterface
 
 class ClaudeCamel(PlayerInterface):

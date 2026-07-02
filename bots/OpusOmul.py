@@ -1,3 +1,9 @@
+# ---
+# name: tb-OpusOmul
+# author: Tyler Barron
+# model: Claude Opus
+# year: 2026
+# ---
 from playerinterface import PlayerInterface
 
 class OpusOmul(PlayerInterface):

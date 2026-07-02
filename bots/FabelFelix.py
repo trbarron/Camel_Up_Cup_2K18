@@ -1,4 +1,10 @@
-"""FableCamel — exact-EV Camel Up bot.
+# ---
+# name: tb-FabelFelix
+# author: Tyler Barron
+# model: Claude Fable 5
+# year: 2026
+# ---
+"""FabelFelix (fka FableCamel) — exact-EV Camel Up bot.
 
 Per turn:
   1. Exactly enumerate every way the current round can finish (every die
@@ -400,7 +406,7 @@ def _decide(me, g):
     return cands[0][1]
 
 
-class FableCamel(PlayerInterface):
+class FabelFelix(PlayerInterface):
     def move(player, g):
         try:
             return _decide(player, g)
