@@ -33,7 +33,18 @@ class Player1(PlayerInterface):
         #If they aren't in last then they'll place a trap on a random square. Still p dumb though
         if min(g.player_money_values) == g.player_money_values[player]:
             return [2,random.randint(0,len(g.camels)-1)]
-        return [1,math.floor(2*random.random())*2-1,random.randint(1,10)]
+        trap_type = math.floor(2*random.random())*2-1
+        # Pick a random position that has no adjacent traps and no current trap.
+        # Avoid position 0 (behind the start) and stay within track bounds.
+        candidates = [
+            pos for pos in range(1, len(g.trap_track) - 1)
+            if not g.trap_track[pos]
+            and not g.trap_track[pos - 1]
+            and not g.trap_track[pos + 1]
+        ]
+        if not candidates:
+            return [0]  # No valid trap spots, fall back to rolling
+        return [1, trap_type, random.choice(candidates)]
 
 class Player2(PlayerInterface):
     def move(player,g):
