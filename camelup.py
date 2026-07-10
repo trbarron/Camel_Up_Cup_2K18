@@ -1,10 +1,7 @@
 import random, copy, math, uuid, hashlib
-from bots.players import Player0, Player1, Player2
-from bots.HandcodedHenry import HandcodedHenry
-from bots.ClaudeCamel import ClaudeCamel
-from bots.OpusOmul import OpusOmul
-from bots.GeminiGerry import GeminiGerry
-from bots.FabelFelix import FabelFelix
+# NOTE: the engine is bot-agnostic — no bot imports at module scope. The
+# __main__ demo below imports a few house bots lazily so a bare checkout (no
+# contenders) still runs it.
 
 camels = [0,1,2,3,4]
 num_camels = len(camels)
@@ -13,7 +10,8 @@ finish_line = 16
 display_updates = False
 
 class GameState:
-    def __init__(self):
+    def __init__(self, rng=None):
+        rng = rng or random
         self.camel_track = [[] for i in range(29)]
         self.trap_track = [[] for i in range(29)] #entry of the form [trap_type (-1,1), player]
         self.player_has_placed_trap = [False,False,False,False]
@@ -29,8 +27,8 @@ class GameState:
         
         initial_camels = copy.deepcopy(camels)
         for _ in range(0,num_camels):
-                index = random.randint(0,len(initial_camels)-1)
-                distance = random.randint(0,2)
+                index = rng.randint(0,len(initial_camels)-1)
+                distance = rng.randint(0,2)
                 self.camel_track[distance].append(initial_camels[index])
                 initial_camels.remove(initial_camels[index])
 
@@ -104,19 +102,22 @@ def PlayGame(player0,player1,player2,player3):
     return g.game_winner
 
 
-def MoveCamel(g,player):
+def MoveCamel(g,player,dice_fn=None):
     if (sum(g.camel_yet_to_move) <= 0):
         print(str(player) + ' tried to move a camel when none could be moved')
         return False
         #raise ValueError(str(player) + ' tried to move a camel when none could be moved')
-    selected_camel = False         #Select camel to move
-    while not selected_camel:
-        camel_index = random.randint(0,num_camels - 1)
-        selected_camel = g.camel_yet_to_move[camel_index]
+    if dice_fn is not None: #Scripted dice (evaluate.py common-random-numbers harness)
+        camel_index, distance = dice_fn(g)
+    else:
+        selected_camel = False         #Select camel to move
+        while not selected_camel:
+            camel_index = random.randint(0,num_camels - 1)
+            selected_camel = g.camel_yet_to_move[camel_index]
+        distance = random.randint(1,3)
     g.camel_yet_to_move[camel_index] = False #Remove camel from pool
     [curr_pos,found_y_pos] = [(ix,iy) for ix, row in enumerate(g.camel_track) for iy, i in enumerate(row) if i == camel_index][0] #Find distance, check for traps
     stack = len(g.camel_track[curr_pos])-found_y_pos
-    distance = random.randint(1,3)
 
     stack_from_bottom = False
     if (len(g.trap_track[curr_pos + distance]) > 0):
@@ -329,6 +330,12 @@ def check_bet(hashed_bet, user_bet):
 
 
 if __name__ == '__main__':
+    from bots.test.players import Player0
+    from bots.house.HandcodedHenry import HandcodedHenry
+    from bots.house.ClaudeCamel import ClaudeCamel
+    from bots.house.OpusOmul import OpusOmul
+    from bots.house.GeminiGerry import GeminiGerry
+    from bots.house.FabelFelix import FabelFelix
     player_pool = [Player0, OpusOmul, HandcodedHenry, ClaudeCamel, GeminiGerry, FabelFelix]
     player_points = [0 for i in range(len(player_pool))]
 

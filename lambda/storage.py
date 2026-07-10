@@ -20,6 +20,10 @@ import os
 LEADERBOARD_KEY = "images/camel-up/leaderboard.json"
 STATUS_PREFIX = "images/camel-up/status/"
 BOTS_PREFIX = "camel-up/bots/"
+# Private (never CDN-served): the in-flight tournament's accumulated stats,
+# written each round so a dropped self-invoke doesn't lose progress. A run is
+# resumable from here; on completion it's overwritten with a tiny done marker.
+CHECKPOINT_PREFIX = "camel-up/checkpoints/"
 
 
 class Storage:
@@ -88,6 +92,13 @@ class Storage:
 
     def read_leaderboard(self):
         raw = self.get(LEADERBOARD_KEY)
+        return json.loads(raw) if raw else None
+
+    def write_checkpoint(self, submission_id, data):
+        self.put(CHECKPOINT_PREFIX + f"{submission_id}.json", json.dumps(data))
+
+    def read_checkpoint(self, submission_id):
+        raw = self.get(CHECKPOINT_PREFIX + f"{submission_id}.json")
         return json.loads(raw) if raw else None
 
     def save_accepted_bot(self, name, code, meta):

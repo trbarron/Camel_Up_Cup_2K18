@@ -21,19 +21,27 @@ ROLE=camel-up-tournament-role
 REGION=${AWS_REGION:-us-west-2}
 BUCKET=${CAMEL_BUCKET:?set CAMEL_BUCKET to the CDN asset bucket name}
 RUNTIME=python3.12
-# 3538 MB = exactly 2 vCPUs. Lambda bills GB-seconds and CPU scales with
-# memory, so with games parallelized across the vCPUs (handler.py) the cost
-# per game is flat across memory sizes — but partial vCPUs (e.g. 2048 MB =
-# 1.16 vCPU) waste billed GB-s. Whole-vCPU sizes are the efficient points.
-MEMORY=3538
+# 10240 MB is the Lambda max, ~6 vCPUs (2026-07-09, raised from 7076/4 to speed
+# up 2000-game boards when a slow-but-legal upload is on the roster). Lambda
+# bills GB-seconds and CPU scales with memory (~1 vCPU / 1769 MB), so with games
+# parallelized across the vCPUs (handler.py) the cost per game is ~flat across
+# memory sizes — more memory buys wall-clock speed, not lower cost. Partial
+# vCPUs (e.g. 2048 MB = 1.16 vCPU) waste billed GB-s; whole-vCPU sizes are the
+# efficient points. Keep CAMEL_WORKERS matched to the vCPU count below.
+MEMORY=10240
 TIMEOUT=900
-GAMES=${CAMEL_TOTAL_GAMES:-200}
+GAMES=${CAMEL_TOTAL_GAMES:-2000}
 
 cd "$(dirname "$0")/.."
 
 BUILD=$(mktemp -d)
 trap 'rm -rf "$BUILD"' EXIT
-zip -q "$BUILD/fn.zip" camelup.py playerinterface.py tournament_core.py bots/*.py
+# Ship the engine + ONLY the house roster and smoke-test baselines. Contenders
+# (bots/contenders/) are the private competitive lab and are never deployed;
+# tournament_core discovers them at import and finds none here, so the Lambda
+# runs the house roster plus whatever bots were accepted via the site.
+zip -q "$BUILD/fn.zip" camelup.py playerinterface.py tournament_core.py \
+  bots/__init__.py bots/house/*.py bots/test/*.py
 zip -qj "$BUILD/fn.zip" lambda/handler.py lambda/sandbox.py lambda/storage.py
 
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
@@ -89,7 +97,7 @@ if aws lambda get-function --function-name "$FUNCTION" --region "$REGION" >/dev/
   aws lambda update-function-configuration --function-name "$FUNCTION" --region "$REGION" \
     --runtime "$RUNTIME" --memory-size "$MEMORY" --timeout "$TIMEOUT" \
     --handler handler.handler \
-    --environment "Variables={CAMEL_BUCKET=$BUCKET,CAMEL_TOTAL_GAMES=$GAMES}" >/dev/null
+    --environment "Variables={CAMEL_BUCKET=$BUCKET,CAMEL_TOTAL_GAMES=$GAMES,CAMEL_WORKERS=${CAMEL_WORKERS:-6}}" >/dev/null
   echo "updated $FUNCTION"
 else
   aws lambda create-function --function-name "$FUNCTION" --region "$REGION" \
