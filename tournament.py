@@ -46,6 +46,7 @@ BOT_COLORS = {
     "tb-OpusOmul":       "bright_blue",
     "tb-GeminiGerry":    "bright_green",
     "tb-FabelFelix":     "bold yellow",
+    "tb-PairedPaul":     "bright_magenta",
 }
 
 ACTION_KEYS   = ["roll", "round_bet", "game_win", "game_lose", "trap"]

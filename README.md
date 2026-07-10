@@ -24,9 +24,22 @@ Bots are shuffled into random 4-player games, scores accumulate across many game
 - **Bet settlement**: Bets settle in the order they were placed. Round bets on the leading camel pay 5/3/2 down the ladder (0 after that); bets on the runner-up pay 1 (first three); every other round bet costs 1 coin. Game winner/loser bets pay 8/5/3/1 down the ladder (1 after that) or -1 if wrong.
 - **Winning**: The player with the most coins when any camel crosses space 16 wins.
 
+## Repository layout
+
+Bots live in three folders by role (see [`bots/README.md`](bots/README.md) for
+the full contract):
+
+- `bots/house/` — the Cup's standing opponents (checked in).
+- `bots/test/` — smoke-test baselines, `Player0/1/2` (checked in).
+- `bots/contenders/` — the private competitive lab (**gitignored**, never deployed).
+
+`tournament_core.py` imports house + test explicitly and **discovers** contenders
+dynamically, so a clean clone (and the Lambda) runs the house roster with no
+contenders present. Scratch experiment scripts live in `lab/` (also gitignored).
+
 ## Adding a Bot
 
-1. Create a new file in `bots/`, e.g. `bots/MyBot.py`:
+1. Create a new file in `bots/contenders/`, e.g. `bots/contenders/MyBot.py`:
 
 ```python
 from playerinterface import PlayerInterface
@@ -38,26 +51,17 @@ class MyBot(PlayerInterface):
         return [0]  # always roll the dice
 ```
 
-2. Import and register your bot. For the basic runner, add it to `camelup.py`:
+2. That's it — no registration needed. `tournament_core` discovers the file and
+   registers it as `tb-MyBot` (the class it defines). It shows up automatically
+   in `tournament.py` and the paired-seed evaluator.
+
+To pit it against the house roster in the basic runner, import it under the
+`__main__` guard in `camelup.py`:
 
 ```python
-from bots.MyBot import MyBot
-
-player_pool = [Player0, Player1, Player2, HandcodedHenry, MyBot]
+from bots.contenders.MyBot import MyBot
+player_pool = [Player0, HandcodedHenry, MyBot]
 ```
-
-For the tournament runner (`tournament.py`), import your bot and add it to `_KNOWN_BOTS`:
-
-```python
-from bots.MyBot import MyBot
-
-_KNOWN_BOTS = [
-    # ... existing bots ...
-    ("MyBot", MyBot),
-]
-```
-
-That's it. The tournament loop handles the rest.
 
 ### What Your Bot Receives
 
@@ -153,6 +157,11 @@ If your bot crashes or returns an invalid action, your turn becomes a dice roll 
 | `OpusOmul` | Built from scratch by an LLM with no knowledge of existing bot strategies. Uses the same core approach (round enumeration + Monte Carlo game sims) but arrived at it independently. Also evaluates trap placement by estimating landing frequency per space |
 | `GeminiGerry` | Monte Carlo simulation bot that uses `copy.deepcopy` for game sims, biases slightly toward action over rolling, and requires a confidence threshold (>25% win probability) before placing game-level bets |
 | `FabelFelix` (fka `FableCamel`) | Exact enumeration of every way the current round can finish (with state merging), Monte Carlo game sims, settlement-order-aware bet pricing, trap placement valued by the EV shift for itself minus a threat-weighted shift for opponents, and a risk posture that chases variance when trailing late and locks in coins when leading |
+| `PairedPaul` | FabelFelix with the risk heuristic replaced by a direct P(win) objective: models each opponent's final coin gap as a normal distribution and scores every action by the probability of finishing with the most coins. Named for the paired-seed evaluation harness that gates its changes. Rejected across three revisions (see `EXPERIMENTS.md`) |
+| `BetReader` | FabelFelix + hidden game-bet inference: reconstructs opponents' face-down game bets from the public order and timing of placements (cross-turn memory), then prices its own bet-ladder slot exactly and weights opponent threats by their inferred bet equity. Positive at all 5 evaluation seeds |
+| `TrapAware` | FabelFelix + future opponent traps modeled in the Monte Carlo game sims, correcting a shared bias (every bot assumes no traps are ever placed again). ~Neutral on its own |
+| `BetTrapReader` 👑 | **Current champion.** BetReader + TrapAware combined. Promoted 2026-07-03 on pooled paired-seed evidence: ~+2pp over FabelFelix, with every bet-inference run in the campaign finishing positive |
+| `PacedPete`, `ParityPeggy`, `TrapDenyDana`, `BetReaderV2` | Experimental one-mechanism variants (income-rate pacing, round-end parity, trap-shadow denial, negative-information inference) — see `DESIGN.md` and `EXPERIMENTS.md` for designs and verdicts |
 
 ## Running
 
@@ -173,6 +182,42 @@ python tournament.py --players ClaudeCamel OpusOmul Player0  # subset of bots
 ```
 
 The tournament runner requires `rich` (`pip install rich`) and provides a live leaderboard, action distribution, seat-order analysis, and move timing stats.
+
+### Paired-seed evaluation (A/B testing bots)
+
+Camel Up is high-luck: real skill differences between good bots are a few
+percentage points of win rate, invisible over hundreds of independent games.
+`lab/evaluate.py` compares two bots using **common random numbers**: both play the
+*same* games — same seed, seat, opponents, camel starting positions, and the
+same pre-scripted dice — so the per-pair win difference cancels the shared luck.
+(Run scratch tools from the repo root with the root on `PYTHONPATH`; see
+[`lab/README.md`](lab/README.md).)
+
+```bash
+PYTHONPATH=. python lab/evaluate.py --candidate tb-PairedPaul --baseline tb-FabelFelix
+PYTHONPATH=. python lab/evaluate.py --candidate bots/contenders/MyBot.py:MyBot --baseline tb-FabelFelix --pairs 500
+PYTHONPATH=. python lab/evaluate.py --candidate tb-FabelFelix --baseline tb-FabelFelix --fixed --workers 1  # self-test: diff is exactly 0
+```
+
+Pairs run in parallel across worker processes (`--workers`, default: all cores
+minus two) and the run stops early via
+[SPRT](https://www.chessprogramming.org/Sequential_Probability_Ratio_Test)
+once the evidence crosses a significance bound — "candidate is better by at
+least `--delta` (default 3pp)" or "it isn't" — or when `--pairs` (the maximum)
+is reached. Use `--fixed` to disable early stopping and `--workers 1` for a
+bit-reproducible run.
+
+Dice are synchronizable because every camel moves exactly once per round in
+uniform random order — each round's move order and die values are scripted
+from the seed (`ScriptedDice`), so paired games see identical camel movement
+regardless of when each player rolls. The report shows each bot's win rate,
+the paired difference with a 95% confidence interval, and the variance
+reduction achieved versus unpaired sampling.
+
+Background reading: [common random numbers](https://en.wikipedia.org/wiki/Variance_reduction),
+[match statistics](https://www.chessprogramming.org/Match_Statistics) and
+[SPRT](https://www.chessprogramming.org/Sequential_Probability_Ratio_Test)
+from the chess engine testing world.
 
 ### Requirements
 

@@ -142,6 +142,24 @@ result, _ = run_to_completion(
 )
 check("rejected", result.get("status") == "rejected", str(result))
 
+print("7. a dropped continuation is recoverable from the S3 checkpoint")
+# First invocation runs a chunk and returns a continuation — then we DROP it
+# (as a lost async self-invoke would) instead of feeding it back.
+dropped = handler.handler(
+    {"id": "sub-drop", "botName": "DropCamel", "author": "tester", "code": GOOD_BOT},
+    FakeContext(),
+)
+check("first chunk asked to continue", "continue" in dropped, str(dropped))
+check("checkpoint persisted mid-run",
+      os.path.exists(os.path.join(WORK, "camel-up/checkpoints/sub-drop.json")))
+# Recovery: re-invoke with just the resume payload — no bot code, no stats.
+result, _ = run_to_completion({"id": "sub-drop", "resume": True})
+status = read_status("sub-drop")
+check("resumes to completion", result.get("status") == "complete", str(result))
+check("full game count after recovery", status["gamesDone"] == 8, str(status["gamesDone"]))
+check("recovered bot persisted",
+      os.path.exists(os.path.join(WORK, "camel-up/bots/DropCamel.py")))
+
 print("6. rerun rebuilds leaderboard including accepted UnitCamel")
 result, _ = run_to_completion({"op": "rerun", "id": "rerun-1"})
 board = Storage().read_leaderboard()

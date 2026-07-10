@@ -1,2 +1,10 @@
 __pycache__
 .DS_Store
+
+# Private competitive lab — kept local, never checked in.
+# Contenders are the bots submitted to / competing in the Cup; the engine and
+# house roster must never hard-depend on them (see bots/README.md).
+bots/contenders/
+
+# Scratch experiment harnesses, sweeps, generated data, and run logs.
+lab/
